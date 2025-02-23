@@ -1,0 +1,13 @@
+[package]
+name = "Archiver"
+version = "1.0.0"
+edition = "2018"
+
+[dependencies]
+clap = { version = "4.5.30", features = ["derive"] }
+zip = "2.2.2"
+sevenz-rust = { version = "0.6.1", features = ["aes256"] }
+tar = "0.4"
+flate2 = "1.0"
+bzip2 = "0.5.1"
+xz2 = "0.1"
