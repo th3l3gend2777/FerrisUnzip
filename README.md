@@ -1,6 +1,9 @@
 Archiver
 
 A versatile Rust command-line tool for extracting a wide range of archive formats, including ZIP, 7Z, TAR, and compressed file formats like GZ, BZ2, and XZ. This tool supports encrypted 7Z archives by allowing users to provide a password.
+
+    Disclaimer: This project is currently experimental and may not be fully secure. Use at your own risk. It is recommended to only extract trusted archives, especially when dealing with encrypted files.
+
 Features
 
     Supports extraction for the following formats:
@@ -25,10 +28,14 @@ You can build and install the project by following these steps:
     cd Archiver
 
 
+
 Build the project using Cargo:
 
     cargo build --release
 
+    Run the tool:
+
+    After building, the executable can be found in the target/release folder.
 
 Usage
 
@@ -37,23 +44,23 @@ Basic Usage
 
 To extract an archive, simply run:
 
-./target/release/extractor --archive <path_to_archive> --extract_to <destination_directory>
+    ./target/release/extractor --archive <path_to_archive> --extract_to <destination_directory>
 
 Extract a ZIP file:
 
-./target/release/extractor --archive archive.zip --extract_to ./extracted_files
+    ./target/release/extractor --archive archive.zip --extract_to ./extracted_files
 
 Extract a 7Z file (with password):
 
-./target/release/extractor --archive archive.7z --extract_to ./extracted_files --password your_password
+    ./target/release/extractor --archive archive.7z --extract_to ./extracted_files --password your_password
 
 Extract a TAR.GZ file:
 
-./target/release/extractor --archive archive.tar.gz --extract_to ./extracted_files
+    ./target/release/extractor --archive archive.tar.gz --extract_to ./extracted_files
 
 Extract a plain TAR file:
 
-./target/release/extractor --archive archive.tar --extract_to ./extracted_files
+    ./target/release/extractor --archive archive.tar --extract_to ./extracted_files
 
 Supported Formats
 
