@@ -1,8 +1,9 @@
+
 use clap::{Arg, Command};
 use std::error::Error;
 use std::fs::{self, File};
 use std::io;
-use std::path::{Path};
+use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 use sevenz_rust::{decompress_file_with_password, Password};
 use tar::Archive as TarArchive;
@@ -10,7 +11,8 @@ use flate2::read::GzDecoder;
 use bzip2::read::BzDecoder;
 use xz2::read::XzDecoder;
 use unrar::Archive;
-
+use std::env;
+use std::io::Write;
 
 // Enum to represent supported archive types
 #[derive(Debug)]
@@ -207,20 +209,50 @@ fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> R
 
 
 // Command-line interface
+
+// Command-line interface
 fn main() -> Result<(), Box<dyn Error>> {
-    let matches = Command::new("FerrisUnzip")
-        .version("1.0")
-        .about("Extracts various archive formats in Rust")
-        .arg(Arg::new("password").short('p').long("password").help("Password for encrypted 7Z").required(false))
-        .arg(Arg::new("archive").help("Path to the archive file").required(true))
-        .arg(Arg::new("extract_to").help("Directory to extract to").required(true))
-        .get_matches();
+    // Collect command-line arguments
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        return Err("Usage: FerrisUnzip <archive_path>".into());
+    }
 
-    let archive = matches.get_one::<String>("archive").unwrap();
-    let extract_to = matches.get_one::<String>("extract_to").unwrap();
-    let password = matches.get_one::<String>("password").map(|s| s.as_str());
+    // Get the archive path from arguments
+    let archive_path = &args[1];
+    let archive_path_obj = Path::new(archive_path);
 
-    extract_archive(archive, extract_to, password)?;
+    // Prompt the user for the extraction directory
+    print!("Where do you want to extract to? (Leave blank to extract where the file is): ");
+    io::stdout().flush()?; // Ensure the prompt is displayed immediately
+    let mut extract_to_str = String::new();
+    io::stdin().read_line(&mut extract_to_str)?;
+    let extract_to_str = extract_to_str.trim();
+
+    // Determine the extraction directory
+    let extract_to: PathBuf = if !extract_to_str.is_empty() {
+        PathBuf::from(extract_to_str)
+    } else {
+        // Use the parent directory of the archive as the default extraction path
+        let archive_dir = archive_path_obj.parent().ok_or("Invalid archive path: Unable to determine parent directory")?;
+        let archive_filename = archive_path_obj
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .ok_or("Invalid filename: Unable to extract file stem")?;
+        archive_dir.join(archive_filename)
+    };
+
+    // Create the extraction directory if it doesn't exist
+    fs::create_dir_all(&extract_to)?;
+
+    // Convert the extraction path to a string, ensuring it's valid UTF-8
+    let extract_to_str = extract_to
+        .to_str()
+        .ok_or("Invalid extraction path: Contains non-UTF-8 characters")?;
+
+    // Extract the archive (assuming `extract_archive` is implemented elsewhere)
+    extract_archive(archive_path, extract_to_str, None)?;
+
     println!("Extraction successful.");
     Ok(())
 }
