@@ -249,7 +249,7 @@ fn main() {
     extract_to_button.set_callback({
         let mut extract_to_frame = extract_to_frame.clone();
         move |_| {
-            let mut chooser = NativeFileChooser::new(fltk::dialog::FileDialogType::BrowseDir);
+            let mut chooser = NativeFileChooser::new(fltk::dialog::FileDialogType::BrowseFile);
             chooser.show();
             if let Some(path) = chooser.filename().to_str() {
                 extract_to_path = path.to_string();
