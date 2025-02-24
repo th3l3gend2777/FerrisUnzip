@@ -5,10 +5,14 @@ use std::io;
 use std::path::{Path};
 use zip::ZipArchive;
 use sevenz_rust::{decompress_file_with_password, Password};
-use tar::Archive;
+use tar::Archive as TarArchive;
+use unrar::Archive as RarArchive;
+
 use flate2::read::GzDecoder;
 use bzip2::read::BzDecoder;
 use xz2::read::XzDecoder;
+use unrar::Archive;
+use unrar::error::UnrarResult;
 
 // Enum to represent supported archive types
 #[derive(Debug)]
@@ -22,6 +26,7 @@ enum ArchiveType {
     Gz,
     Bz2,
     Xz,
+    Rar,
     Unknown,
 }
 
@@ -65,12 +70,14 @@ fn get_archive_type(path: &Path) -> ArchiveType {
                     ArchiveType::Unknown
                 }
             }
+            "rar" => ArchiveType::Rar, // <-- Add RAR detection
             _ => ArchiveType::Unknown,
         }
     } else {
         ArchiveType::Unknown
     }
 }
+
 
 // Extract ZIP archive (non-encrypted)
 fn extract_zip(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
@@ -112,14 +119,15 @@ fn extract_7z(archive: &str, extract_to: &str, password: Option<&str>) -> Result
 // Extract plain TAR archive
 fn extract_tar(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(archive)?;
-    let mut archive = Archive::new(file);
-    archive.unpack(extract_to)?;
+    let mut archive = TarArchive::new(file); // Explicitly using TarArchive
+    archive.unpack(extract_to)?; // No more method not found error
     Ok(())
 }
 
+
 // Extract TAR archive with compression
 fn extract_tar_compressed(archive: &str, extract_to: &str, decoder: impl io::Read) -> Result<(), Box<dyn Error>> {
-    let mut archive = Archive::new(decoder);
+    let mut archive = TarArchive::new(decoder);
     archive.unpack(extract_to)?;
     Ok(())
 }
@@ -193,9 +201,12 @@ fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> R
         ArchiveType::Gz => decompress_gz(archive, extract_to),
         ArchiveType::Bz2 => decompress_bz2(archive, extract_to),
         ArchiveType::Xz => decompress_xz(archive, extract_to),
+        ArchiveType::Rar => extract_rar(archive, extract_to), // <-- Use extract_rar function here
         ArchiveType::Unknown => Err("Unsupported archive format".into()),
     }
 }
+
+
 
 // Command-line interface
 fn main() -> Result<(), Box<dyn Error>> {
@@ -215,3 +226,31 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Extraction successful.");
     Ok(())
 }
+
+
+fn extract_rar(archive_path: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
+    let mut archive = Archive::new(archive_path).open_for_processing()?;
+
+    // Ensure the extraction directory exists
+    fs::create_dir_all(extract_to)?;
+
+    while let Some(header) = archive.read_header()? {
+        let dest_path = Path::new(extract_to).join(header.entry().filename.to_string_lossy().as_ref());
+
+        if header.entry().is_directory() {
+            fs::create_dir_all(&dest_path)?;
+            archive = header.skip()?;
+        } else {
+            // Ensure parent directories exist
+            if let Some(parent) = dest_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            // Extract the file to the destination
+            archive = header.extract_to(&dest_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+
