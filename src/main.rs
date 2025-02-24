@@ -6,13 +6,11 @@ use std::path::{Path};
 use zip::ZipArchive;
 use sevenz_rust::{decompress_file_with_password, Password};
 use tar::Archive as TarArchive;
-use unrar::Archive as RarArchive;
-
 use flate2::read::GzDecoder;
 use bzip2::read::BzDecoder;
 use xz2::read::XzDecoder;
 use unrar::Archive;
-use unrar::error::UnrarResult;
+
 
 // Enum to represent supported archive types
 #[derive(Debug)]
@@ -126,7 +124,7 @@ fn extract_tar(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
 
 
 // Extract TAR archive with compression
-fn extract_tar_compressed(archive: &str, extract_to: &str, decoder: impl io::Read) -> Result<(), Box<dyn Error>> {
+fn extract_tar_compressed(extract_to: &str, decoder: impl io::Read) -> Result<(), Box<dyn Error>> {
     let mut archive = TarArchive::new(decoder);
     archive.unpack(extract_to)?;
     Ok(())
@@ -136,21 +134,21 @@ fn extract_tar_compressed(archive: &str, extract_to: &str, decoder: impl io::Rea
 fn extract_tar_gz(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(archive)?;
     let decoder = GzDecoder::new(file);
-    extract_tar_compressed(archive, extract_to, decoder)
+    extract_tar_compressed(extract_to, decoder)
 }
 
 // Extract TAR.BZ2 archive
 fn extract_tar_bz2(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(archive)?;
     let decoder = BzDecoder::new(file);
-    extract_tar_compressed(archive, extract_to, decoder)
+    extract_tar_compressed(extract_to, decoder)
 }
 
 // Extract TAR.XZ archive
 fn extract_tar_xz(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(archive)?;
     let decoder = XzDecoder::new(file);
-    extract_tar_compressed(archive, extract_to, decoder)
+    extract_tar_compressed(extract_to, decoder)
 }
 
 // Decompress single-file GZ
@@ -210,7 +208,7 @@ fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> R
 
 // Command-line interface
 fn main() -> Result<(), Box<dyn Error>> {
-    let matches = Command::new("extractor")
+    let matches = Command::new("FerrisUnzip")
         .version("1.0")
         .about("Extracts various archive formats in Rust")
         .arg(Arg::new("password").short('p').long("password").help("Password for encrypted 7Z").required(false))
