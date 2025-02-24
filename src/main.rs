@@ -221,7 +221,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .get_matches();
 
     let archive_path = matches.get_one::<String>("archive").unwrap();
-    let password = matches.get_one::<String>("password").map(|s| s.as_str());
+    let mut password = matches.get_one::<String>("password").map(|s| s.as_str());
 
     // Prompt for extraction directory
     print!("Where do you want to extract to? (Leave blank to extract where the file is): ");
@@ -247,10 +247,31 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create the extraction directory
     fs::create_dir_all(&extract_to)?;
 
-    // Extract the archive
-    extract_archive(archive_path, extract_to.to_str().unwrap(), password)?;
+    // Attempt extraction
+    let mut result = extract_archive(archive_path, extract_to.to_str().unwrap(), password);
 
-    println!("Extraction successful.");
+    // Check for missing password error
+    if let Err(err) = &result {
+        if err.to_string().contains("Error: MissingPassword@Process") {
+            // Prompt for password
+            print!("Password for encrypted archive: ");
+            io::stdout().flush()?;
+
+            let mut new_password = String::new();
+            io::stdin().read_line(&mut new_password)?;
+            password = Some(new_password.trim());
+
+            // Retry extraction with password
+            result = extract_archive(archive_path, extract_to.to_str().unwrap(), password);
+        }
+    }
+
+    // Handle final result
+    match result {
+        Ok(_) => println!("Extraction successful."),
+        Err(err) => eprintln!("Extraction failed: {}", err),
+    }
+
     Ok(())
 }
 
