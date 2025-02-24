@@ -29,9 +29,6 @@ Build the project using Cargo:
 
     cargo build --release
 
-    Run the tool:
-
-    After building, the executable can be found in the target/release folder.
 
 Usage
 
