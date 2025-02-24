@@ -1,76 +1,163 @@
 use clap::{Arg, Command};
-use std::error::Error;
-use std::fs::{self, File};
-use std::io;
-use std::path::{Path};
-use zip::ZipArchive;
-use sevenz_rust::{decompress_file_with_password, Password};
-use tar::Archive;
-use flate2::read::GzDecoder;
-use bzip2::read::BzDecoder;
-use xz2::read::XzDecoder;
+   use std::error::Error;
+   use std::fs::{self, File};
+   use std::io;
+   use std::path::{Path};
+   use zip::ZipArchive;
+   use sevenz_rust::{decompress_file_with_password, Password};
+   use tar::Archive;
+   use flate2::read::GzDecoder;
+   use bzip2::read::BzDecoder;
+   use xz2::read::XzDecoder;
+   use gtk::prelude::*;
+   use gtk::{Application, ApplicationWindow, Button, Entry, FileChooserAction, FileChooserButton, Label, Orientation, Box};
+   use unrar::Archive as RarArchive;
 
-// Enum to represent supported archive types
-#[derive(Debug)]
-enum ArchiveType {
-    Zip,
-    SevenZ,
-    Tar,
-    TarGz,
-    TarBz2,
-    TarXz,
-    Gz,
-    Bz2,
-    Xz,
-    Unknown,
-}
+   // Enum to represent supported archive types
+   #[derive(Debug)]
+   enum ArchiveType {
+       Zip,
+       SevenZ,
+       Tar,
+       TarGz,
+       TarBz2,
+       TarXz,
+       Gz,
+       Bz2,
+       Xz,
+       Rar,
+       Unknown,
+   }
 
-// Determine archive type based on file extension
-fn get_archive_type(path: &Path) -> ArchiveType {
-    if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-        match ext.to_lowercase().as_str() {
-            "zip" => ArchiveType::Zip,
-            "7z" => ArchiveType::SevenZ,
-            "tar" => ArchiveType::Tar,
-            "gz" => {
-                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                    if stem.ends_with(".tar") {
-                        ArchiveType::TarGz
-                    } else {
-                        ArchiveType::Gz
-                    }
-                } else {
-                    ArchiveType::Unknown
-                }
-            }
-            "bz2" => {
-                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                    if stem.ends_with(".tar") {
-                        ArchiveType::TarBz2
-                    } else {
-                        ArchiveType::Bz2
-                    }
-                } else {
-                    ArchiveType::Unknown
-                }
-            }
-            "xz" => {
-                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                    if stem.ends_with(".tar") {
-                        ArchiveType::TarXz
-                    } else {
-                        ArchiveType::Xz
-                    }
-                } else {
-                    ArchiveType::Unknown
-                }
-            }
-            _ => ArchiveType::Unknown,
-        }
-    } else {
-        ArchiveType::Unknown
-    }
-}
+   // Determine archive type based on file extension
+   fn get_archive_type(path: &Path) -> ArchiveType {
+       if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+           match ext.to_lowercase().as_str() {
+               "zip" => ArchiveType::Zip,
+               "7z" => ArchiveType::SevenZ,
+               "tar" => ArchiveType::Tar,
+               "gz" => {
+                   if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                       if stem.ends_with(".tar") {
+                           ArchiveType::TarGz
+                       } else {
+                           ArchiveType::Gz
+                       }
+                   } else {
+                       ArchiveType::Unknown
+                   }
+               }
+               "bz2" => {
+                   if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                       if stem.ends_with(".tar") {
+                           ArchiveType::TarBz2
+                       } else {
+                           ArchiveType::Bz2
+                       }
+                   } else {
+                       ArchiveType::Unknown
+                   }
+               }
+               "xz" => {
+                   if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                       if stem.ends_with(".tar") {
+                           ArchiveType::TarXz
+                       } else {
+                           ArchiveType::Xz
+                       }
+                   } else {
+                       ArchiveType::Unknown
+                   }
+               }
+               "rar" => ArchiveType::Rar,
+               _ => ArchiveType::Unknown,
+           }
+       } else {
+           ArchiveType::Unknown
+       }
+   }
+
+
+
+   // Main extraction function
+   fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> Result<(), Box<dyn Error>> {
+       let path = Path::new(archive);
+       if !path.exists() {
+           return Err("Archive file does not exist".into());
+       }
+
+       let archive_type = get_archive_type(path);
+       match archive_type {
+           ArchiveType::Zip => extract_zip(archive, extract_to),
+           ArchiveType::SevenZ => extract_7z(archive, extract_to, password),
+           ArchiveType::Tar => extract_tar(archive, extract_to),
+           ArchiveType::TarGz => extract_tar_gz(archive, extract_to),
+           ArchiveType::TarBz2 => extract_tar_bz2(archive, extract_to),
+           ArchiveType::TarXz => extract_tar_xz(archive, extract_to),
+           ArchiveType::Gz => decompress_gz(archive, extract_to),
+           ArchiveType::Bz2 => decompress_bz2(archive, extract_to),
+           ArchiveType::Xz => decompress_xz(archive, extract_to),
+           ArchiveType::Rar => extract_rar(archive, extract_to),
+           ArchiveType::Unknown => Err("Unsupported archive format".into()),
+       }
+   }
+
+   // Command-line interface
+   fn main() -> Result<(), Box<dyn Error>> {
+       let application = Application::new(
+           Some("com.example.ferrisunzip"),
+           Default::default(),
+       )
+       .expect("Initialization failed...");
+
+       application.connect_activate(|app| {
+           let window = ApplicationWindow::new(app);
+           window.set_title("FerrisUnzip");
+           window.set_default_size(350, 200);
+
+           let vbox = Box::new(Orientation::Vertical, 5);
+
+           let archive_label = Label::new(Some("Archive Path:"));
+           vbox.pack_start(&archive_label, false, false, 0);
+
+           let archive_entry = Entry::new();
+           vbox.pack_start(&archive_entry, false, false, 0);
+
+           let extract_label = Label::new(Some("Extract To:"));
+           vbox.pack_start(&extract_label, false, false, 0);
+
+           let extract_entry = Entry::new();
+           vbox.pack_start(&extract_entry, false, false, 0);
+
+           let button = Button::with_label("Extract");
+           vbox.pack_start(&button, false, false, 0);
+
+           button.connect_clicked(move |_| {
+               let archive_path = archive_entry.text().to_string();
+               let extract_path = extract_entry.text().to_string();
+
+               if let Err(e) = extract_archive(&archive_path, &extract_path, None) {
+                   eprintln!("Extraction failed: {}", e);
+               } else {
+                   println!("Extraction successful.");
+               }
+           });
+
+           window.add(&vbox);
+           window.show_all();
+       });
+
+       application.run(&[]);
+
+       Ok(())
+   }
+
+   // Extract RAR archive
+   fn extract_rar(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
+       let mut archive = RarArchive::new(archive.to_owned()).extract_to(extract_to.to_owned())?;
+       archive.process()?;
+       Ok(())
+   }
 
 // Extract ZIP archive (non-encrypted)
 fn extract_zip(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
