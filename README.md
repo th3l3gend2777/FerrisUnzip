@@ -1,4 +1,4 @@
-Archiver
+FerrisUnzip 
 
 A versatile Rust command-line tool for extracting a wide range of archive formats, including ZIP, 7Z, TAR, and compressed file formats like GZ, BZ2, and XZ. This tool supports encrypted 7Z archives by allowing users to provide a password.
 
