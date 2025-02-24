@@ -24,7 +24,7 @@ Installation
 
 You can build and install the project by following these steps:
 
-    Clone the repository:git clone https://github.com/dragonfly939/Archiver.git
+    Clone the repository:git clone https://github.com/dragonfly939/FerrisUnzip.git
     cd Archiver
 
 
