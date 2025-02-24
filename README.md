@@ -21,10 +21,9 @@ Installation
 
 You can build and install the project by following these steps:
 
-    Clone the repository:
+    Clone the repository:git clone https://github.com/dragonfly939/Archiver.git
+    cd Archiver
 
-git clone https://github.com/dragonfly939/Archiver.git
-cd Archiver
 
 Build the project using Cargo:
 
