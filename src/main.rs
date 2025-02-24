@@ -252,7 +252,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Check for missing password error
     if let Err(err) = &result {
-        if err.to_string().contains("Error: MissingPassword@Process") {
+        if err.to_string().contains("Pass") {
             // Prompt for password
             print!("Password for encrypted archive: ");
             io::stdout().flush()?;
