@@ -11,3 +11,5 @@ tar = "0.4"
 flate2 = "1.0"
 bzip2 = "0.5.1"
 xz2 = "0.1"
+gtk = { version = "0.14", features = ["v3_18"] }
+unrar = "0.8.0"
