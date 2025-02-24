@@ -211,20 +211,22 @@ fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> R
 // Command-line interface
 
 // Command-line interface
+// Command-line interface
 fn main() -> Result<(), Box<dyn Error>> {
-    // Collect command-line arguments
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        return Err("Usage: FerrisUnzip <archive_path>".into());
-    }
+    let matches = Command::new("FerrisUnzip")
+        .version("1.0")
+        .about("Extracts various archive formats in Rust")
+        .arg(Arg::new("archive").help("Path to the archive file").required(true))
+        .arg(Arg::new("password").short('p').long("password").help("Password for encrypted 7Z").required(false))
+        .get_matches();
 
-    // Get the archive path from arguments
-    let archive_path = &args[1];
-    let archive_path_obj = Path::new(archive_path);
+    let archive_path = matches.get_one::<String>("archive").unwrap();
+    let password = matches.get_one::<String>("password").map(|s| s.as_str());
 
-    // Prompt the user for the extraction directory
+    // Prompt for extraction directory
     print!("Where do you want to extract to? (Leave blank to extract where the file is): ");
-    io::stdout().flush()?; // Ensure the prompt is displayed immediately
+    io::stdout().flush()?;
+
     let mut extract_to_str = String::new();
     io::stdin().read_line(&mut extract_to_str)?;
     let extract_to_str = extract_to_str.trim();
@@ -233,7 +235,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let extract_to: PathBuf = if !extract_to_str.is_empty() {
         PathBuf::from(extract_to_str)
     } else {
-        // Use the parent directory of the archive as the default extraction path
+        let archive_path_obj = Path::new(archive_path);
         let archive_dir = archive_path_obj.parent().ok_or("Invalid archive path: Unable to determine parent directory")?;
         let archive_filename = archive_path_obj
             .file_stem()
@@ -242,16 +244,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         archive_dir.join(archive_filename)
     };
 
-    // Create the extraction directory if it doesn't exist
+    // Create the extraction directory
     fs::create_dir_all(&extract_to)?;
 
-    // Convert the extraction path to a string, ensuring it's valid UTF-8
-    let extract_to_str = extract_to
-        .to_str()
-        .ok_or("Invalid extraction path: Contains non-UTF-8 characters")?;
-
-    // Extract the archive (assuming `extract_archive` is implemented elsewhere)
-    extract_archive(archive_path, extract_to_str, None)?;
+    // Extract the archive
+    extract_archive(archive_path, extract_to.to_str().unwrap(), password)?;
 
     println!("Extraction successful.");
     Ok(())
