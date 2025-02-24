@@ -24,7 +24,7 @@ Installation
 
 You can build and install the project by following these steps:
 
-    Clone the repository:git clone https://github.com/dragonfly939/FerrisUnzip.git
+    Clone the repository:git clone https://github.com/th3l3gend2777/FerrisUnzip.git
     cd FerrisUnzip
 
 
