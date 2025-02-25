@@ -1,4 +1,3 @@
-
 use clap::{Arg, Command};
 use std::error::Error;
 use std::fs::{self, File};
@@ -11,7 +10,6 @@ use flate2::read::GzDecoder;
 use bzip2::read::BzDecoder;
 use xz2::read::XzDecoder;
 use unrar::Archive;
-use std::env;
 use std::io::Write;
 
 // Enum to represent supported archive types
@@ -300,5 +298,3 @@ fn extract_rar(archive_path: &str, extract_to: &str) -> Result<(), Box<dyn Error
 
     Ok(())
 }
-
-
