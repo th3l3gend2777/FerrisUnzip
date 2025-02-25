@@ -1,6 +1,4 @@
-Below is a detailed `README.md` file for your project based on the provided code. It includes sections such as project description, installation instructions, usage examples, and additional notes to help users understand and use your application effectively.
 
----
 
 # FerrisUnzip
 
