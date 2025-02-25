@@ -160,6 +160,3 @@ This project is licensed under the GPL License. See the [LICENSE](https://github
 
 For more information, refer to the [project documentation](https://github.com/th3l3gend2777/FerrisUnzip).
 
----
-
-This `README.md` file is designed to be comprehensive yet concise, ensuring that users can quickly understand the purpose and functionality of your project while also having access to detailed instructions for installation and usage.
