@@ -1,4 +1,7 @@
+#![windows_subsystem = "windows"]
 use eframe::egui;
+
+
 use rfd::FileDialog;
 use zip::ZipArchive;
 use sevenz_rust::{decompress_file_with_password, Password};
@@ -7,10 +10,11 @@ use flate2::read::GzDecoder;
 use bzip2::read::BzDecoder;
 use xz2::read::XzDecoder;
 use std::error::Error;
-use std::ffi::CString;
 use std::fs::{self, File};
 use std::io;
 use unrar::{Archive, OpenArchive, UnrarResult};
+use sevenz_rust::{Archive as SevenZArchive, Password as SevenZPassword};
+use unrar::Archive as RarArchive;
 
 use std::path::{Path, PathBuf};
 
@@ -31,6 +35,116 @@ enum ArchiveType {
     Unknown,
 }
 
+struct MyApp {
+    archive_path: String,
+    extract_to_path: String,
+    password: String,
+    message: String,
+    archive_contents: Vec<String>, // New field to store archive contents
+}
+impl Default for MyApp {
+    fn default() -> Self {
+        Self {
+            archive_path: String::new(),
+            extract_to_path: String::new(),
+            password: String::new(),
+            message: String::new(),
+            archive_contents: Vec::new(), // Initialize as empty
+        }
+    }
+}
+
+
+
+fn list_archive_contents(archive: &str, password: Option<&str>) -> Result<Vec<String>, Box<dyn Error>> {
+    let path = Path::new(archive);
+    if !path.exists() {
+        return Err("Archive file does not exist".into());
+    }
+
+    let archive_type = get_archive_type(path);
+    match archive_type {
+        ArchiveType::Zip => {
+            let file = File::open(archive)?;
+            let mut archive = ZipArchive::new(file)?;
+            let contents: Vec<String> = (0..archive.len())
+                .map(|i| {
+                    let file = archive.by_index(i).unwrap();
+                    file.name().to_string()
+                })
+                .collect();
+            Ok(contents)
+        }
+        ArchiveType::SevenZ => {
+            // Open the 7z archive with or without a password
+            let archive = match password {
+                Some(pwd) => SevenZArchive::open_with_password(archive, &SevenZPassword::from(pwd))?,
+                None => SevenZArchive::open(archive)?,
+            };
+
+            // Extract filenames from the archive's files field
+            let contents: Vec<String> = archive
+                .files
+                .iter()
+                .map(|entry| entry.name().to_string())
+                .collect();
+
+            Ok(contents)
+        }
+        ArchiveType::Tar => {
+            let file = File::open(archive)?;
+            let mut archive = TarArchive::new(file);
+            let contents: Vec<String> = archive
+                .entries()?
+                .map(|entry| entry.unwrap().path().unwrap().to_string_lossy().to_string())
+                .collect();
+            Ok(contents)
+        }
+        ArchiveType::TarGz => {
+            let file = File::open(archive)?;
+            let decoder = GzDecoder::new(file);
+            let mut archive = TarArchive::new(decoder);
+            let contents: Vec<String> = archive
+                .entries()?
+                .map(|entry| entry.unwrap().path().unwrap().to_string_lossy().to_string())
+                .collect();
+            Ok(contents)
+        }
+        ArchiveType::TarBz2 => {
+            let file = File::open(archive)?;
+            let decoder = BzDecoder::new(file);
+            let mut archive = TarArchive::new(decoder);
+            let contents: Vec<String> = archive
+                .entries()?
+                .map(|entry| entry.unwrap().path().unwrap().to_string_lossy().to_string())
+                .collect();
+            Ok(contents)
+        }
+        ArchiveType::TarXz => {
+            let file = File::open(archive)?;
+            let decoder = XzDecoder::new(file);
+            let mut archive = TarArchive::new(decoder);
+            let contents: Vec<String> = archive
+                .entries()?
+                .map(|entry| entry.unwrap().path().unwrap().to_string_lossy().to_string())
+                .collect();
+            Ok(contents)
+        }
+        ArchiveType::Rar => {
+            let mut archive = RarArchive::new(archive).open_for_processing()?;
+            let mut contents = Vec::new();
+
+            while let Some(header) = archive.read_header()? {
+                let filename = header.entry().filename.to_string_lossy().to_string();
+                contents.push(filename);
+                archive = header.skip()?;
+            }
+
+            Ok(contents)
+        }
+        _ => Err("Unsupported archive format for listing".into()),
+    }
+}
 // Determine archive type based on file extension
 fn get_archive_type(path: &Path) -> ArchiveType {
     if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
@@ -232,26 +346,6 @@ fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> R
         ArchiveType::Unknown => Err("Unsupported archive format".into()),
     }
 }
-
-// Egui Application State
-struct MyApp {
-    archive_path: String,
-    extract_to_path: String,
-    password: String,
-    message: String,
-}
-
-impl Default for MyApp {
-    fn default() -> Self {
-        Self {
-            archive_path: String::new(),
-            extract_to_path: String::new(),
-            password: String::new(),
-            message: String::new(),
-        }
-    }
-}
-
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -264,6 +358,18 @@ impl eframe::App for MyApp {
                     .pick_file()
                 {
                     self.archive_path = path.to_string_lossy().to_string();
+
+                    // List archive contents
+                    match list_archive_contents(&self.archive_path, None) {
+                        Ok(contents) => {
+                            self.archive_contents = contents;
+                            self.message = "Archive contents loaded successfully!".to_string();
+                        }
+                        Err(e) => {
+                            self.message = format!("Error listing archive contents: {}", e);
+                            self.archive_contents.clear();
+                        }
+                    }
                 }
             }
             ui.label(format!("Archive Path: {}", self.archive_path));
@@ -296,8 +402,25 @@ impl eframe::App for MyApp {
                 }
             }
 
-            // Display Message
-            ui.label(&self.message);
+            // Display Archive Contents (Scrollable)
+            ui.separator();
+            ui.heading("Archive Contents");
+
+            // Create a scrollable area that spans the full width of the window
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false]) // Prevent auto-shrinking to ensure full width
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width()); // Ensure the scroll area uses the full width
+
+                    if self.archive_contents.is_empty() {
+                        ui.label("No contents to display.");
+                    } else {
+                        for item in &self.archive_contents {
+                            ui.label(item);
+                        }
+                    }
+
+            });
         });
     }
 }
@@ -307,6 +430,9 @@ fn main() {
     eframe::run_native(
         "FerrisUnzip",
         options,
-        Box::new(|_cc| Ok(Box::new(MyApp::default()))),
+        Box::new(|_cc| {
+            let app: Box<dyn eframe::App> = Box::new(MyApp::default());
+            Ok(app)
+        }),
     );
 }
