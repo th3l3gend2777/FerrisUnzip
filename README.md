@@ -1,111 +1,57 @@
-FerrisUnzip 
+# FerrisUnzip
 
-A versatile Rust command-line tool for extracting a wide range of archive formats, including ZIP, 7Z, TAR, and compressed file formats like GZ, BZ2, and XZ. This tool supports encrypted 7Z archives by allowing users to provide a password.
+FerrisUnzip is a command-line tool written in Rust for extracting various archive formats. It supports ZIP, 7Z (with password protection), TAR, TAR.GZ, TAR.BZ2, TAR.XZ, GZ, BZ2, XZ, and RAR archives.
 
-    Disclaimer: This project is currently experimental and may not be fully secure. Use at your own risk. It is recommended to only extract trusted archives, especially when dealing with encrypted files.
+## Features
 
-Features
+-   **Multi-format support:** Extracts ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, GZ, BZ2, XZ, and RAR archives.
+-   **Password protection:** Supports password-protected 7Z archives.
+-   **Cross-platform:** Built with Rust, making it cross-platform compatible.
+-   **Interactive extraction directory prompt:** Allows users to specify the extraction destination.
+-   **Automatic directory creation:** Creates necessary directories during extraction.
+-   **Password retry:** Prompts for a password if an encrypted 7Z archive is detected without one.
 
-    Supports extraction for the following formats:
-        ZIP (.zip)
-        7Z (.7z)
-        TAR (.tar)
-        TAR.GZ (.tar.gz)
-        TAR.BZ2 (.tar.bz2)
-        TAR.XZ (.tar.xz)
-        GZ (.gz)
-        BZ2 (.bz2)
-        XZ (.xz)
-    Decompresses single-file GZ, BZ2, and XZ archives.
-    Supports encrypted 7Z archives using a password.
-    Extracts all file types to a specified directory.
+## Prerequisites
 
-Installation
+-   Rust and Cargo installed.
 
-You can build and install the project by following these steps:
+## Installation
 
-    Clone the repository:git clone https://github.com/th3l3gend2777/FerrisUnzip.git
+1.  Clone the repository:
+
+    ```bash
+    git clone https://github.com/th3l3gend2777/FerrisUnzip/
     cd FerrisUnzip
+    ```
 
+2.  Build the project:
 
-
-Build the project using Cargo:
-
+    ```bash
     cargo build --release
+    ```
 
-    Run the tool:
+3.  The executable will be located at `target/release/FerrisUnzip`. You can copy it to a directory in your PATH for easy access.
 
-    After building, the executable can be found in the target/release folder.
+## Usage
 
-Usage
+```bash
+FerrisUnzip <archive_file> [OPTIONS]
+```
 
-The extractor tool is a command-line utility that allows you to extract various archive formats by specifying the archive file and the destination directory.
-Basic Usage
+Dependancies
 
-To extract an archive, simply run:
-
-    ./target/release/extractor --archive <path_to_archive> --extract_to <destination_directory>
-
-Extract a ZIP file:
-
-    ./target/release/extractor --archive archive.zip --extract_to ./extracted_files
-
-Extract a 7Z file (with password):
-
-    ./target/release/extractor --archive archive.7z --extract_to ./extracted_files --password your_password
-
-Extract a TAR.GZ file:
-
-    ./target/release/extractor --archive archive.tar.gz --extract_to ./extracted_files
-
-Extract a plain TAR file:
-
-    ./target/release/extractor --archive archive.tar --extract_to ./extracted_files
-
-Supported Formats
-
-    ZIP (.zip)
-    7Z (.7z)
-    TAR (.tar)
-    TAR.GZ (.tar.gz)
-    TAR.BZ2 (.tar.bz2)
-    TAR.XZ (.tar.xz)
-    GZ (.gz)
-    BZ2 (.bz2)
-    XZ (.xz)
-
-Options
-
-    -p, --password <password>: Password for encrypted 7Z files. If the 7Z archive is not encrypted, this option can be omitted.
-    --archive <path_to_archive>: Path to the archive file you wish to extract.
-    --extract_to <destination_directory>: Directory where the files will be extracted.
-
-Example
-
-To extract an encrypted 7Z archive:
-
-./target/release/extractor --archive archive.7z --extract_to ./extracted_files --password mysecurepassword
-
-Error Handling
-
-    Invalid Archive Format: The tool will inform you if an unsupported archive type is encountered.
-    File Not Found: If the specified archive file does not exist, an error message will be displayed.
-    Password Protection: If a password is required for a 7Z archive, but not provided, you will receive an error.
-
-Dependencies
-
-    clap for command-line argument parsing.
-    zip for handling ZIP archives.
-    sevenz_rust for handling 7Z archives.
-    tar for handling TAR archives.
-    flate2 for handling GZ compression.
-    bzip2 for handling BZ2 compression.
-    xz2 for handling XZ compression.
-
-License
-
-This project is licensed under the GPL License - see the LICENSE file for details.
+    clap: For command-line argument parsing.
+    zip: For ZIP archive extraction.
+    sevenz-rust: For 7Z archive extraction.
+    tar: For TAR archive extraction.
+    flate2: For GZ decompression.
+    bzip2: For BZ2 decompression.
+    xz2: For XZ decompression.
+    unrar: For RAR archive extraction.
 
 Contributing
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for any bugs, suggestions, or enhancements.
+Contributions are welcome! Please feel free to submit a pull request or open an issue.
+License
+
+This project is licensed under the GPL License
