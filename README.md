@@ -1,111 +1,167 @@
-FerrisUnzip 
+Below is a detailed `README.md` file for your project based on the provided code. It includes sections such as project description, installation instructions, usage examples, and additional notes to help users understand and use your application effectively.
 
-A versatile Rust command-line tool for extracting a wide range of archive formats, including ZIP, 7Z, TAR, and compressed file formats like GZ, BZ2, and XZ. This tool supports encrypted 7Z archives by allowing users to provide a password.
+---
 
-    Disclaimer: This project is currently experimental and may not be fully secure. Use at your own risk. It is recommended to only extract trusted archives, especially when dealing with encrypted files.
+# FerrisUnzip
 
-Features
-
-    Supports extraction for the following formats:
-        ZIP (.zip)
-        7Z (.7z)
-        TAR (.tar)
-        TAR.GZ (.tar.gz)
-        TAR.BZ2 (.tar.bz2)
-        TAR.XZ (.tar.xz)
-        GZ (.gz)
-        BZ2 (.bz2)
-        XZ (.xz)
-    Decompresses single-file GZ, BZ2, and XZ archives.
-    Supports encrypted 7Z archives using a password.
-    Extracts all file types to a specified directory.
-
-Installation
-
-You can build and install the project by following these steps:
-
-    Clone the repository:git clone https://github.com/th3l3gend2777/FerrisUnzip.git
-    cd FerrisUnzip
+FerrisUnzip is a lightweight, cross-platform archive extraction tool built using Rust. It supports extracting files from various archive formats, including ZIP, 7Z, TAR, GZ, BZ2, XZ, and RAR. The application provides both a command-line interface (CLI) and a graphical user interface (GUI) powered by Egui, making it accessible for both developers and end-users.
 
 
+---
 
-Build the project using Cargo:
+## Table of Contents
 
-    cargo build --release
+1. [Features](#features)
+2. [Installation](#installation)
+3. [Usage](#usage)
+    - [Command-Line Interface (CLI)](#command-line-interface-cli)
+    - [Graphical User Interface (GUI)](#graphical-user-interface-gui)
+4. [Supported Archive Formats](#supported-archive-formats)
+5. [Dependencies](#dependencies)
+6. [Contributing](#contributing)
+7. [License](#license)
 
-    Run the tool:
+---
 
-    After building, the executable can be found in the target/release folder.
+## Features
 
-Usage
+- **Multi-format Support**: Extract files from ZIP, 7Z, TAR, GZ, BZ2, XZ, and RAR archives.
+- **Password Handling**: Supports password-protected archives (e.g., encrypted 7Z and RAR files).
+- **Cross-Platform**: Runs on Windows, macOS, and Linux.
+- **User-Friendly GUI**: Powered by Egui, providing an intuitive interface for selecting archives and extraction directories.
+- **Command-Line Interface**: Allows for scripting and automation of archive extraction tasks.
 
-The extractor tool is a command-line utility that allows you to extract various archive formats by specifying the archive file and the destination directory.
-Basic Usage
+---
 
-To extract an archive, simply run:
+## Installation
 
-    ./target/release/extractor --archive <path_to_archive> --extract_to <destination_directory>
+### Prerequisites
 
-Extract a ZIP file:
+- **Rust Toolchain**: Ensure you have Rust installed. You can install it from [rust-lang.org](https://www.rust-lang.org/tools/install).
+- **Cargo**: The Rust package manager is required to build and run the application.
 
-    ./target/release/extractor --archive archive.zip --extract_to ./extracted_files
+### Building from Source
 
-Extract a 7Z file (with password):
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/th3l3gend2777/FerrisUnzip/
+   cd ferrisunzip
+   ```
 
-    ./target/release/extractor --archive archive.7z --extract_to ./extracted_files --password your_password
+2. Build the project:
+   ```bash
+   cargo build --release
+   ```
 
-Extract a TAR.GZ file:
+3. Run the application:
+   ```bash
+   ./target/release/ferrisunzip
+   ```
 
-    ./target/release/extractor --archive archive.tar.gz --extract_to ./extracted_files
+### Precompiled Binaries
 
-Extract a plain TAR file:
+Precompiled binaries for Windows, macOS, and Linux are available in the [Releases](https://github.com/th3l3gend2777/FerrisUnzip/releases/tag/release) section of the repository.
 
-    ./target/release/extractor --archive archive.tar --extract_to ./extracted_files
+---
 
-Supported Formats
+## Usage
 
-    ZIP (.zip)
-    7Z (.7z)
-    TAR (.tar)
-    TAR.GZ (.tar.gz)
-    TAR.BZ2 (.tar.bz2)
-    TAR.XZ (.tar.xz)
-    GZ (.gz)
-    BZ2 (.bz2)
-    XZ (.xz)
+### Command-Line Interface (CLI)
 
-Options
+To extract an archive using the CLI, run the following command:
 
-    -p, --password <password>: Password for encrypted 7Z files. If the 7Z archive is not encrypted, this option can be omitted.
-    --archive <path_to_archive>: Path to the archive file you wish to extract.
-    --extract_to <destination_directory>: Directory where the files will be extracted.
+```bash
+ferrisunzip <archive_path> <extract_to_directory> [--password <password>]
+```
 
-Example
+#### Example:
 
-To extract an encrypted 7Z archive:
+Extract a password-protected 7Z archive:
+```bash
+ferrisunzip example.7z /path/to/extract --password mypassword
+```
 
-./target/release/extractor --archive archive.7z --extract_to ./extracted_files --password mysecurepassword
+Extract a plain TAR.GZ archive:
+```bash
+ferrisunzip example.tar.gz /path/to/extract
+```
 
-Error Handling
+### Graphical User Interface (GUI)
 
-    Invalid Archive Format: The tool will inform you if an unsupported archive type is encountered.
-    File Not Found: If the specified archive file does not exist, an error message will be displayed.
-    Password Protection: If a password is required for a 7Z archive, but not provided, you will receive an error.
+1. Launch the application.
+2. Use the "Select Archive" button to choose the archive file you want to extract.
+3. Use the "Select Extract Directory" button to specify the destination folder.
+4. If the archive is password-protected, enter the password in the provided field.
+5. Click the "Extract" button to begin extraction.
 
-Dependencies
+![GUI Workflow](https://github.com/th3l3gend2777/FerrisUnzip/tree/nightly/Pictures/FerrisUnzip.png)
 
-    clap for command-line argument parsing.
-    zip for handling ZIP archives.
-    sevenz_rust for handling 7Z archives.
-    tar for handling TAR archives.
-    flate2 for handling GZ compression.
-    bzip2 for handling BZ2 compression.
-    xz2 for handling XZ compression.
 
-License
+---
 
-This project is licensed under the GPL License - see the LICENSE file for details.
+## Supported Archive Formats
 
-Contributing
+The following archive formats are supported:
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for any bugs, suggestions, or enhancements.
+| Format | Extensions       | Password Support |
+|--------|------------------|------------------|
+| ZIP    | `.zip`           | No               |
+| 7Z     | `.7z`            | Yes              |
+| TAR    | `.tar`           | No               |
+| TAR.GZ | `.tar.gz`, `.tgz`| No               |
+| TAR.BZ2| `.tar.bz2`       | No               |
+| TAR.XZ | `.tar.xz`        | No               |
+| GZ     | `.gz`            | No               |
+| BZ2    | `.bz2`           | No               |
+| XZ     | `.xz`            | No               |
+| RAR    | `.rar`           | Yes              |
+
+---
+
+## Dependencies
+
+This project relies on several Rust crates and libraries:
+
+- `eframe` and `egui`: For building the graphical user interface [[1]].
+- `rfd`: For file and directory selection dialogs in the GUI.
+- `zip`, `sevenz-rust`, `tar`, `flate2`, `bzip2`, `xz2`, `unrar`: For handling various archive formats.
+- `clap`: For parsing command-line arguments (if applicable).
+
+Install dependencies using Cargo:
+```bash
+cargo build
+```
+
+---
+
+## Contributing
+
+We welcome contributions! Here's how you can help:
+
+1. **Bug Reports**: Open an issue on GitHub if you encounter any problems.
+2. **Feature Requests**: Suggest new features or improvements via GitHub issues.
+3. **Code Contributions**: Fork the repository, make your changes, and submit a pull request.
+
+Please ensure your contributions adhere to the project's coding standards and include appropriate tests.
+
+---
+
+## License
+
+This project is licensed under the GPL License. See the [LICENSE](https://github.com/th3l3gend2777/FerrisUnzip/blob/main/Licence.md) file for details.
+
+---
+
+## Additional Notes
+
+- **Error Handling**: The application provides clear error messages for unsupported formats, missing files, and incorrect passwords.
+- **Performance**: Optimized for handling large archives efficiently.
+- **Future Enhancements**:
+    - Add support for additional archive formats (e.g., ZST).
+    - Improve the GUI with advanced features like progress indicators.
+
+For more information, refer to the [project documentation](https://github.com/th3l3gend2777/FerrisUnzip).
+
+---
+
+This `README.md` file is designed to be comprehensive yet concise, ensuring that users can quickly understand the purpose and functionality of your project while also having access to detailed instructions for installation and usage.

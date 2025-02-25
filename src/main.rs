@@ -1,19 +1,19 @@
-use clap::{Arg, Command};
-use std::error::Error;
-use std::fs::{self, File};
-use std::io;
-use std::path::{Path};
+use eframe::egui;
+use rfd::FileDialog;
 use zip::ZipArchive;
 use sevenz_rust::{decompress_file_with_password, Password};
 use tar::Archive as TarArchive;
 use flate2::read::GzDecoder;
 use bzip2::read::BzDecoder;
 use xz2::read::XzDecoder;
-use unrar::Archive;
-use fltk::{
-    app, button::Button, dialog::NativeFileChooser, frame::Frame, input::Input, prelude::*,
-    window::Window,
-};
+use std::error::Error;
+use std::ffi::CString;
+use std::fs::{self, File};
+use std::io;
+use unrar::{Archive, OpenArchive, UnrarResult};
+
+use std::path::{Path, PathBuf};
+
 
 // Enum to represent supported archive types
 #[derive(Debug)]
@@ -71,7 +71,7 @@ fn get_archive_type(path: &Path) -> ArchiveType {
                     ArchiveType::Unknown
                 }
             }
-            "rar" => ArchiveType::Rar, // <-- Add RAR detection
+            "rar" => ArchiveType::Rar,
             _ => ArchiveType::Unknown,
         }
     } else {
@@ -79,16 +79,13 @@ fn get_archive_type(path: &Path) -> ArchiveType {
     }
 }
 
-
 // Extract ZIP archive (non-encrypted)
 fn extract_zip(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(archive)?;
     let mut archive = ZipArchive::new(file)?;
-
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
         let outpath = Path::new(extract_to).join(file.name());
-
         if file.name().ends_with('/') {
             fs::create_dir_all(&outpath)?;
         } else {
@@ -105,9 +102,8 @@ fn extract_zip(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
 }
 
 // Extract 7Z archive (supports encryption with password)
-fn extract_7z(archive: &str, extract_to: &str, password: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+fn extract_7z(archive: &str, extract_to: &str, password: Option<&str>) -> Result<(), Box<dyn Error>> {
     let path = Path::new(archive);
-
     if let Some(pwd) = password {
         let password = Password::from(pwd); // Convert to Password
         decompress_file_with_password(path, extract_to, password)?;
@@ -124,7 +120,6 @@ fn extract_tar(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
     archive.unpack(extract_to)?; // No more method not found error
     Ok(())
 }
-
 
 // Extract TAR archive with compression
 fn extract_tar_compressed(extract_to: &str, decoder: impl io::Read) -> Result<(), Box<dyn Error>> {
@@ -184,13 +179,44 @@ fn decompress_xz(archive: &str, extract_to: &str) -> Result<(), Box<dyn Error>> 
     Ok(())
 }
 
+// Extract RAR archive
+fn extract_rar(archive_path: &str, extract_to: &str, password: Option<&str>) -> Result<(), Box<dyn Error>> {
+    // Create the RAR archive with or without a password
+    let mut archive = match password {
+        Some(pwd) => Archive::with_password(archive_path, pwd).open_for_processing()?,
+        None => Archive::new(archive_path).open_for_processing()?,
+    };
+
+    // Ensure the extraction directory exists
+    fs::create_dir_all(extract_to)?;
+
+    // Process each file in the archive
+    while let Some(header) = archive.read_header()? {
+        let dest_path = Path::new(extract_to).join(header.entry().filename.to_string_lossy().as_ref());
+
+        if header.entry().is_directory() {
+            // Create directories
+            fs::create_dir_all(&dest_path)?;
+            archive = header.skip()?;
+        } else {
+            // Ensure parent directories exist
+            if let Some(parent) = dest_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            // Extract the file to the destination
+            archive = header.extract_to(&dest_path)?;
+        }
+    }
+
+    Ok(())
+}
 // Main extraction function
 fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> Result<(), Box<dyn Error>> {
     let path = Path::new(archive);
     if !path.exists() {
         return Err("Archive file does not exist".into());
     }
-
     let archive_type = get_archive_type(path);
     match archive_type {
         ArchiveType::Zip => extract_zip(archive, extract_to),
@@ -202,118 +228,85 @@ fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> R
         ArchiveType::Gz => decompress_gz(archive, extract_to),
         ArchiveType::Bz2 => decompress_bz2(archive, extract_to),
         ArchiveType::Xz => decompress_xz(archive, extract_to),
-        ArchiveType::Rar => extract_rar(archive, extract_to), // <-- Use extract_rar function here
+        ArchiveType::Rar => extract_rar(archive, extract_to, password),
         ArchiveType::Unknown => Err("Unsupported archive format".into()),
     }
 }
 
-
-
-// Command-line interface
-// FLTK GUI Implementation
-fn main() {
-    // Initialize FLTK application
-    let app = app::App::default();
-    let mut wind = Window::default()
-        .with_size(400, 300)
-        .center_screen()
-        .with_label("FerrisUnzip");
-
-    // Widgets
-    let mut archive_button = Button::new(10, 10, 380, 30, "Select Archive");
-    let mut archive_path_frame = Frame::default().with_pos(10, 50).with_size(380, 30);
-    let mut extract_to_button = Button::new(10, 90, 380, 30, "Select Extract Directory");
-    let mut extract_to_frame = Frame::default().with_pos(10, 130).with_size(380, 30);
-    let mut password_input = Input::new(40, 170, 380, 30, "Pass:");
-    let mut extract_button = Button::new(10, 210, 380, 30, "Extract");
-
-    // Variables to store selected paths
-    let mut archive_path = String::new();
-    let mut extract_to_path = String::new();
-
-    // Select Archive File
-    archive_button.set_callback({
-        let mut archive_path_frame = archive_path_frame.clone();
-        move |_| {
-            let mut chooser = NativeFileChooser::new(fltk::dialog::FileDialogType::BrowseFile);
-            chooser.set_filter("*.{zip,7z,tar,gz,bz2,xz,rar}");
-            chooser.show();
-            if let Some(path) = chooser.filename().to_str() {
-                archive_path = path.to_string();
-                archive_path_frame.set_label(&archive_path);
-            }
-        }
-    });
-
-    // Select Extract Directory
-    extract_to_button.set_callback({
-        let mut extract_to_frame = extract_to_frame.clone();
-        move |_| {
-            let mut chooser = NativeFileChooser::new(fltk::dialog::FileDialogType::BrowseFile);
-            chooser.show();
-            if let Some(path) = chooser.filename().to_str() {
-                extract_to_path = path.to_string();
-                extract_to_frame.set_label(&extract_to_path);
-            }
-        }
-    });
-
-    // Extract Button
-    extract_button.set_callback({
-        let archive_path_frame = archive_path_frame.clone();
-        let extract_to_frame = extract_to_frame.clone();
-        let password_input = password_input.clone();
-        move |_| {
-            // Bind the labels to variables to extend their lifetime
-            let archive_label = archive_path_frame.label(); // Add this line
-            let extract_to_label = extract_to_frame.label(); // Add this line
-
-            // Convert to &str using .as_str()
-            let archive = archive_label.as_str(); // Modify this line
-            let extract_to = extract_to_label.as_str(); // Modify this line
-
-            let password = password_input.value();
-
-            if archive.is_empty() || extract_to.is_empty() {
-                fltk::dialog::alert_default("Please select both archive and extract directory.");
-                return;
-            }
-
-            match extract_archive(archive, extract_to, if password.is_empty() { None } else { Some(&password) }) {
-                Ok(_) => fltk::dialog::message_default("Extraction successful!"),
-                Err(e) => fltk::dialog::alert_default(&format!("Error: {}", e)),
-            };
-        }
-    });
-
-    // Show the window and run the application
-    wind.end();
-    wind.show();
-    app.run().unwrap();
+// Egui Application State
+struct MyApp {
+    archive_path: String,
+    extract_to_path: String,
+    password: String,
+    message: String,
 }
 
-
-fn extract_rar(archive_path: &str, extract_to: &str) -> Result<(), Box<dyn Error>> {
-    let mut archive = Archive::new(archive_path).open_for_processing()?;
-
-    // Ensure the extraction directory exists
-    fs::create_dir_all(extract_to)?;
-
-    while let Some(header) = archive.read_header()? {
-        let dest_path = Path::new(extract_to).join(header.entry().filename.to_string_lossy().as_ref());
-
-        if header.entry().is_directory() {
-            fs::create_dir_all(&dest_path)?;
-            archive = header.skip()?;
-        } else {
-            // Ensure parent directories exist
-            if let Some(parent) = dest_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            // Extract the file to the destination
-            archive = header.extract_to(&dest_path)?;
+impl Default for MyApp {
+    fn default() -> Self {
+        Self {
+            archive_path: String::new(),
+            extract_to_path: String::new(),
+            password: String::new(),
+            message: String::new(),
         }
     }
+}
 
-    Ok(())
+impl eframe::App for MyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("FerrisUnzip");
+
+            // Select Archive File
+            if ui.button("Select Archive").clicked() {
+                if let Some(path) = FileDialog::new()
+                    .add_filter("Archives", &["zip", "7z", "tar", "gz", "bz2", "xz", "rar"])
+                    .pick_file()
+                {
+                    self.archive_path = path.to_string_lossy().to_string();
+                }
+            }
+            ui.label(format!("Archive Path: {}", self.archive_path));
+
+            // Select Extract Directory
+            if ui.button("Select Extract Directory").clicked() {
+                if let Some(path) = FileDialog::new().pick_folder() {
+                    self.extract_to_path = path.to_string_lossy().to_string();
+                }
+            }
+            ui.label(format!("Extract To: {}", self.extract_to_path));
+
+            // Password Input
+            ui.label("Password:");
+            ui.text_edit_singleline(&mut self.password);
+
+            // Extract Button
+            if ui.button("Extract").clicked() {
+                if self.archive_path.is_empty() || self.extract_to_path.is_empty() {
+                    self.message = "Please select both archive and extract directory.".to_string();
+                } else {
+                    match extract_archive(
+                        &self.archive_path,
+                        &self.extract_to_path,
+                        if self.password.is_empty() { None } else { Some(&self.password) },
+                    ) {
+                        Ok(_) => self.message = "Extraction successful!".to_string(),
+                        Err(e) => self.message = format!("Error: {}", e),
+                    };
+                }
+            }
+
+            // Display Message
+            ui.label(&self.message);
+        });
+    }
+}
+
+fn main() {
+    let options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "FerrisUnzip",
+        options,
+        Box::new(|_cc| Ok(Box::new(MyApp::default()))),
+    );
 }
