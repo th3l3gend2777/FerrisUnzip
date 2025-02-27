@@ -68,7 +68,7 @@ fn get_archive_type(path: &Path) -> ArchiveType {
                     ArchiveType::Unknown
                 }
             }
-            "rar" => ArchiveType::Rar, // <-- Add RAR detection
+            "rar" => ArchiveType::Rar, 
             _ => ArchiveType::Unknown,
         }
     } else {
@@ -208,8 +208,6 @@ fn extract_archive(archive: &str, extract_to: &str, password: Option<&str>) -> R
 
 // Command-line interface
 
-// Command-line interface
-// Command-line interface
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = Command::new("FerrisUnzip")
         .version("1.0")
